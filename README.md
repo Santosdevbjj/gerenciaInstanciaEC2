@@ -50,7 +50,7 @@ Este projeto serve como guia de estudos, prática e referência futura para admi
 📂 **Descrição Completa de Cada Pasta e Arquivo**
 
 
----
+
 
 🗂️ **1. Pasta /scripts — Automação via AWS CLI**
 
