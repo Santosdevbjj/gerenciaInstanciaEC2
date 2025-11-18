@@ -8,6 +8,12 @@
 ---
 
 
+**DESCRIÇÃO:**
+Neste laboratório, iremos praticar conceitos fundamentais de gerenciamento de instâncias EC2 na AWS, com foco em criação e utilização de AMIs (Amazon Machine Images) e Snapshots EBS.
+
+---
+
+
 
 🟦 **Gerenciamento de Instâncias EC2 na AWS — AMIs, Snapshots e Automação**
 
