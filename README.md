@@ -263,9 +263,40 @@ Documentação GitHub / Markdown (links no repo)
 ---
 
 
+# Explanação & notas extras 
+
+## Fluxo conceitual rápido
+1. **Instância (EC2)** é o servidor virtual.
+2. **Volume EBS** é o disco anexado (root ou adicional).
+3. **Snapshot** é o backup ponto-no-tempo de um volume EBS (armazenado no S3 gerenciado pela AWS).
+4. **AMI** é uma imagem que encapsula um snapshot do root e metadados (usada para lançar instâncias idênticas).
+
+## Comandos úteis (resumidos)
+- Criar AMI: `aws ec2 create-image --instance-id i-... --name "name" --no-reboot`
+- Desregistrar AMI: `aws ec2 deregister-image --image-id ami-...`
+- Criar snapshot: `aws ec2 create-snapshot --volume-id vol-...`
+- Criar volume: `aws ec2 create-volume --snapshot-id snap-... --availability-zone us-east-1a`
+- Anexar volume: `aws ec2 attach-volume --instance-id i-... --volume-id vol-... --device /dev/xvdf`
+
+## Atenção sobre snapshots cifrados
+- Snapshots EBS cifrados não podem ser compartilhados diretamente entre contas sem considerar KMS CMKs e políticas.
+- Ao copiar um snapshot entre regiões ou contas, verifique chaves KMS.
+
+---
+
+# Segurança: lembrar de remover credenciais locais
+- Nunca commit `.aws/credentials` nem chaves `.pem`.
+- Adicione `.gitignore` com:
 
 
-Autor:
+AWS credentials
+
+.aws/ *.pem
+
+---
+
+
+**Autor:**
 Sergio Santos 
 
 ---
