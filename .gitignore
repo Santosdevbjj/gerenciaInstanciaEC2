@@ -1,0 +1,59 @@
+# ------------------------------------------
+# Arquivos sensíveis e credenciais
+# ------------------------------------------
+*.pem
+*.ppk
+*.key
+*.crt
+
+# Credenciais AWS
+.aws/
+credentials
+config
+
+# Logs
+*.log
+logs/
+*.out
+*.err
+
+# ------------------------------------------
+# Python (caso use notebooks)
+# ------------------------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.ipynb_checkpoints/
+
+# ------------------------------------------
+# Terraform
+# ------------------------------------------
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# ------------------------------------------
+# Editor / SO
+# ------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Backups
+*.bak
+*.tmp
+
+# ------------------------------------------
+# Diretórios temporários
+# ------------------------------------------
+tmp/
+temp/
+.cache/
