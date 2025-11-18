@@ -7,291 +7,434 @@
 
 ---
 
-**Projeto: Gerenciando Instâncias EC2 na AWS**
-Repositório: https://github.com/Santosdevbjj/gerenciaInstanciaEC2
 
-### Sumário
-1. Descrição do projeto  
-2. Objetivos de aprendizagem  
-3. Estrutura do repositório (esquema visual)  
-4. Pré-requisitos (hardware / software / permissões)  
-5. Passo-a-passo detalhado
-   - Criar uma instância EC2 (Console)
-   - Conectar via SSH
-   - Criar AMI (Console e AWS CLI)
-   - Criar Snapshot EBS (Console e AWS CLI)
-   - Restaurar volume a partir de Snapshot
-   - Lançar nova instância a partir de AMI
-   - Compartilhar e permissões de AMI
-   - Limpeza de recursos
-6. Scripts e automações (local `scripts/`)
-7. Exemplo Terraform (opcional)
-8. Segurança e boas práticas
-9. Recursos úteis / referências
-10. Estrutura de arquivos e descrição de cada arquivo
+
+🟦 **Gerenciamento de Instâncias EC2 na AWS — AMIs, Snapshots e Automação**
+
+Este repositório faz parte do Bootcamp TQI – Modernização com GenAI, contendo documentação e scripts para gerenciar recursos EC2 na AWS, incluindo:
+
+• Criação de AMIs
+
+• Criação de Snapshots EBS
+
+• Restauração de volumes
+
+• Lançamento de instâncias a partir de AMIs
+
+• Infraestrutura como código com Terraform
+
+• Documentação técnica completa
+
+• Estrutura profissional de pastas
+
+
+Este projeto serve como guia de estudos, prática e referência futura para administração de ambientes EC2.
+
 
 ---
 
-## 1. Descrição
-Laboratório prático para manipular EC2, AMIs e Snapshots EBS. O objetivo é documentar os passos e fornecer scripts reutilizáveis para ensinar/replicar o fluxo de criação de imagens e recuperação.
+📁 **Estrutura de Pastas do Repositório**
 
-## 2. Objetivos de aprendizagem
-- Criar e gerenciar instâncias EC2.
-- Gerar AMIs a partir de instâncias em execução.
-- Criar Snapshots de volumes EBS.
-- Restaurar volumes a partir de Snapshots.
-- Automatizar processos com AWS CLI / scripts / Terraform.
-- Documentar procedimentos e organizar em repositório GitHub.
-
-## 3. Estrutura do repositório
-
-
-<img width="964" height="985" alt="Screenshot_20251118-030919" src="https://github.com/user-attachments/assets/880046c0-79b6-4437-88c8-6a6caa3cb693" />
-
+<img width="928" height="1048" alt="Screenshot_20251118-145547" src="https://github.com/user-attachments/assets/6be4e69d-1d4d-405f-924d-364b9b4706c5" />
 
 
 
 ---
 
-## 4. Pré-requisitos (HW / SW / Permissões)
-**Hardware (máquina local):**
-- CPU: 2+ cores (qualquer laptop moderno serve)
-- RAM: 4GB+ recomendado
-- Espaço disco: 2GB+ livre para scripts/logs
-
-**Software (local):**
-- Git (≥2.x)
-- AWS CLI v2 configurado (`aws configure`) — credenciais com permissão EC2/IAM/EC2:CreateImage, ec2:CreateSnapshot, ec2:CreateVolume, ec2:RunInstances etc.
-- SSH client (`ssh`, `putty` no Windows)
-- (Opcional) Terraform se for usar `terraform/` (versão 1.x)
-
-**Permissões AWS necessárias (mínimo)**
-- `ec2:RunInstances`, `ec2:TerminateInstances`
-- `ec2:CreateImage`, `ec2:DeregisterImage`
-- `ec2:CreateSnapshot`, `ec2:DeleteSnapshot`
-- `ec2:CreateVolume`, `ec2:AttachVolume`, `ec2:DetachVolume`
-- (Opcional) `iam:PassRole` se usar roles
-
-> Use um usuário/role com princípio do menor privilégio. Evite usar credenciais root.
-
----
-
-## 5. Passo-a-passo detalhado
-
-### A. Criar uma instância EC2 (Console)
-1. Acesse AWS Console → EC2 → **Instances** → **Launch instances**.
-2. Escolha AMI (Amazon Linux 2 ou Ubuntu LTS para exemplos).
-3. Escolha tipo (p.ex. `t3.micro` para Free Tier se elegível).
-4. Key pair: selecione ou crie um par de chaves (baixe `.pem` e proteja).
-   ```bash
-   chmod 400 minha-chave.pem
-
-  
-
-  
----
-
-
-5. Network / Subnet: escolha VPC/subnet apropriada.
-
-
-6. Security Group: abra porta 22 (SSH) para seu IP (NUNCA 0.0.0.0/0 em produção).
-
-
-7. Storage: defina EBS root (p.ex. 8 GiB gp3).
-
-
-8. Launch instance.
-
-
-
-B. Conectar via SSH (Linux / Mac / Windows WSL)
-
-ssh -i ~/keys/minha-chave.pem ec2-user@<PUBLIC_IP>
-# ou para Ubuntu
-ssh -i ~/keys/minha-chave.pem ubuntu@<PUBLIC_IP>
-
-C. Preparar a instância (ex.: instalar pacotes)
-
-Exemplo (Amazon Linux 2):
-
-sudo yum update -y
-sudo yum install -y httpd
-sudo systemctl enable --now httpd
-echo "Hello from AMI test" | sudo tee /var/www/html/index.html
-
-D. Criar AMI (Console)
-
-1. No Console EC2 → Instances → selecione a instância → Actions → Image and templates → Create image.
-
-
-2. Preencha nome e descrição. Se desejar sem reboot, marque No Reboot (atenção: pode causar filesystem inconsistente).
-
-
-3. Clique em Create Image. A AMI aparecerá em AMIs e snapshots dos volumes serão criados automaticamente.
-
-
-
-D2. Criar AMI (AWS CLI)
-
-# Substitua REGION e INSTANCE_ID
-aws ec2 create-image \
-  --region us-east-1 \
-  --instance-id i-0123456789abcdef0 \
-  --name "minha-ami-exemplo-$(date +%Y%m%d-%H%M)" \
-  --description "AMI criada para bootcamp TQI" \
-  --no-reboot
-
-Resposta JSON inclui ImageId (p.ex. ami-0abcd1234...).
-
-E. Verificar status da AMI e Snapshots (AWS CLI)
-
-# Verificar AMI
-aws ec2 describe-images --image-ids ami-0abcd1234 --region us-east-1
-
-# Ver snapshots associados (filtrar por owner e description)
-aws ec2 describe-snapshots --owner-ids self --filters "Name=description,Values=*minha-ami-exemplo*" --region us-east-1
-
-F. Criar Snapshot EBS manualmente (Console)
-
-1. EC2 → Volumes → selecione volume → Actions → Create snapshot.
-
-
-2. Preencha nome/descrição → Create snapshot.
-
-
-3. Snapshot aparece em Snapshots.
-
-
-
-F2. Criar Snapshot via AWS CLI
-
-# Substitua VOLUME_ID
-aws ec2 create-snapshot \
-  --region us-east-1 \
-  --volume-id vol-0a1b2c3d4e5f6g7h \
-  --description "Snapshot do volume root antes de mudança"
-
-Saída retorna SnapshotId (p.ex. snap-0123456789abcdef0).
-
-G. Restaurar volume a partir de Snapshot
-
-# Criar volume a partir do snapshot
-aws ec2 create-volume \
-  --region us-east-1 \
-  --availability-zone us-east-1a \
-  --snapshot-id snap-0123456789abcdef0 \
-  --volume-type gp3 \
-  --size 8
-# Depois anexe o volume à instância:
-aws ec2 attach-volume --volume-id vol-0abcd1234 --instance-id i-0123456789abcdef0 --device /dev/xvdf
-
-No Linux, você pode então montar (sudo mount /dev/xvdf /mnt/recuperado) e checar dados.
-
-H. Lançar nova instância a partir da AMI (Console)
-
-1. EC2 → AMIs → selecione AMI → Launch.
-
-
-2. Configure tipo, key pair, security group e storage.
-
-
-3. Launch.
-
-
-
-**I. Compartilhar / Permissões de AMI**
-
-Console → AMIs → Actions → Modify Image Permissions → Compartilhar com contas AWS específicas ou tornar pública (evite tornar pública em produção).
-
-Se AMI utilizar snapshots cifrados, compartilhamento possui limitações (snapshots cifrados NÃO podem ser compartilhados diretamente).
-
-
-**J. Limpeza (importantíssimo)**
-
-Deregister AMI:
-
-aws ec2 deregister-image --image-id ami-0abcd1234 --region us-east-1
-
-**Deletar snapshots associados:**
-
-aws ec2 delete-snapshot --snapshot-id snap-0123456789abcdef0 --region us-east-1
-
-Terminar instâncias e deletar volumes não usados.
-
+📂 **Descrição Completa de Cada Pasta e Arquivo**
 
 
 ---
 
+🗂️ **1. Pasta /scripts — Automação via AWS CLI**
+
+Scripts escritos em Bash para facilitar operações recorrentes no EC2.
+
+▶️ **scripts/create_ami.sh**
+
+Cria uma AMI (Amazon Machine Image) a partir de uma instância EC2 existente.
+
+Inclui:
+
+Validação de parâmetros
+
+Tagging automático
+
+Retorno do AMI ID
 
 
-**8. Segurança e boas práticas**
+Uso:
 
-Use Security Groups restritivos (abrir porta 22 apenas para seu IP).
-
-Nunca exponha chaves privadas em repositório.
-
-Use KMS para criptografar volumes/snapshots sensíveis.
-
-Evite --no-reboot em AMIs de produção a menos que entenda o risco.
-
-Automatize limpeza de recursos temporários (snapshots/volumes/amis).
-
-Controle custos com tags e alerta de orçamentos (AWS Budgets).
-
-
-**9. Recursos úteis**
-
-Documentação AWS EC2 / AMI / Snapshots (link oficial)
-
-Documentação GitHub / Markdown (links no repo)
-
-
-**10. Arquivos e caminhos**
-
-/README.md — este arquivo principal.
-
-/docs/EC2_AMI_Snapshot_Guide.md — guia estendido e screenshots (opcional).
-
-/scripts/*.sh — scripts de automação (create_ami, create_snapshot, restore_volume...).
-
-/terraform/main.tf — exemplo de infra como código.
-
-/images/ — captures de tela usadas no tutorial.
+./create_ami.sh <INSTANCE_ID> <AMI_NAME>
 
 
 ---
 
+▶️ **scripts/create_snapshot.sh**
 
-# Explanação & notas extras 
+Cria um Snapshot EBS a partir de um volume existente.
 
-## Fluxo conceitual rápido
-1. **Instância (EC2)** é o servidor virtual.
-2. **Volume EBS** é o disco anexado (root ou adicional).
-3. **Snapshot** é o backup ponto-no-tempo de um volume EBS (armazenado no S3 gerenciado pela AWS).
-4. **AMI** é uma imagem que encapsula um snapshot do root e metadados (usada para lançar instâncias idênticas).
+Uso:
 
-## Comandos úteis (resumidos)
-- Criar AMI: `aws ec2 create-image --instance-id i-... --name "name" --no-reboot`
-- Desregistrar AMI: `aws ec2 deregister-image --image-id ami-...`
-- Criar snapshot: `aws ec2 create-snapshot --volume-id vol-...`
-- Criar volume: `aws ec2 create-volume --snapshot-id snap-... --availability-zone us-east-1a`
-- Anexar volume: `aws ec2 attach-volume --instance-id i-... --volume-id vol-... --device /dev/xvdf`
+./create_snapshot.sh <VOLUME_ID> <DESCRIPTION>
 
-## Atenção sobre snapshots cifrados
-- Snapshots EBS cifrados não podem ser compartilhados diretamente entre contas sem considerar KMS CMKs e políticas.
-- Ao copiar um snapshot entre regiões ou contas, verifique chaves KMS.
 
 ---
 
-# Segurança: lembrar de remover credenciais locais
-- Nunca commit `.aws/credentials` nem chaves `.pem`.
-- Adicione `.gitignore` com:
+▶️ **scripts/restore_volume_from_snapshot.sh**
+
+Restaura um novo volume com base em um snapshot.
+
+Uso:
+
+./restore_volume_from_snapshot.sh <SNAPSHOT_ID> <AVAILABILITY_ZONE>
 
 
-AWS credentials
+---
 
-.aws/ *.pem
+▶️ **scripts/launch_instance_from_ami.sh**
+
+Lança uma instância EC2 com base em uma AMI.
+
+Parâmetros:
+
+AMI ID
+
+Tipo da instância
+
+Par de chaves
+
+Security Group
+
+Subnet
+
+
+Uso:
+
+./launch_instance_from_ami.sh <AMI_ID> <INSTANCE_TYPE> <KEY_NAME> <SG_ID> <SUBNET_ID>
+
+
+---
+
+🗂️ **2. .gitignore**
+
+Inclui regras para ignorar:
+
+Chaves e certificados (.pem, .ppk)
+
+Arquivos temporários
+
+Cache
+
+Arquivos sensíveis
+
+Diretórios do Terraform
+
+Logs
+
+Configurações específicas do sistema operacional
+
+
+Essencial para manter o repositório limpo e seguro.
+
+
+---
+
+🗂️ **3. Pasta /terraform — Infraestrutura como Código**
+
+Contém arquivos Terraform, permitindo subir EC2, VPCs e recursos AWS de forma reprodutível.
+
+📄 **main.tf**
+
+Define a infraestrutura:
+
+Provedor AWS
+
+Instância EC2
+
+Security group
+
+Volume EBS opcional
+
+
+Exemplo de recursos contidos:
+
+resource "aws_instance" "ec2" {
+  ami           = var.ami_id
+  instance_type = var.instance_type
+  tags = {
+    Name = "EC2-Gerenciada-Terraform"
+  }
+}
+
+
+---
+
+📄 **variables.tf**
+
+Declara variáveis:
+
+Região
+
+AMI
+
+Tipo de instância
+
+Tags
+
+Chave SSH
+
+
+Organiza e parametriza o projeto Terraform.
+
+
+---
+
+🗂️ **4. Pasta /docs — Documentação Complementar**
+
+📄 docs/EC2_AMI_Snapshot_Guide.md
+
+Explica detalhadamente:
+
+O que são AMIs
+
+O que são snapshots
+
+Boas práticas
+
+Como executar cada operação na AWS
+
+Como automatizar processos
+
+
+Serve como material de estudo e consulta técnica.
+
+
+---
+
+📄 **docs/imagens_e_comentarios.md**
+
+Arquivo opcional contendo:
+
+Explicações adicionais
+
+Comentários sobre o laboratório
+
+Observações sobre as capturas de tela
+
+
+
+---
+
+🗂️ **5. Pasta /images**
+
+Contém capturas de tela utilizadas no guia principal ou documentação complementar.
+
+🖼️ **images/captura tela.png**
+
+Exemplo visual de:
+
+Criação de AMI
+
+Criação de snapshot
+
+Dashboard EC2
+
+Execução de instâncias
+
+
+
+---
+
+ **Requisitos de Hardware e Software**
+
+
+
+
+**Hardware (mínimo recomendado)**
+
+**Recurso	Requisito**
+
+RAM	4 GB (mínimo), 8 GB recomendado
+Armazenamento	10 GB livres
+Processador	2 núcleos
+Internet	10 Mbps estável
+
+
+
+---
+
+**Software Necessário**
+
+ Local (máquina do usuário)
+
+Git
+
+AWS CLI v2
+
+Terraform 1.x
+
+Editor de código (VS Code recomendado)
+
+Ferramentas opcionais:
+
+jq (para parse JSON)
+
+Bash Shell (Linux / macOS / Windows WSL)
+
+
+
+
+---
+
+ **Na AWS**
+
+**Conta AWS ativa**
+
+IAM User com permissões:
+
+ec2:RunInstances
+
+ec2:CreateImage
+
+ec2:CreateSnapshot
+
+ec2:RegisterImage
+
+ec2:AttachVolume
+
+ec2:Describe*
+
+
+
+
+---
+
+ **Tecnologias Utilizadas**
+
+**Tecnologia	Uso**
+
+AWS EC2	Criação de instâncias, volumes e imagens
+AWS EBS	Snapshots e volumes persistentes
+AWS CLI	Automação via scripts
+Terraform	Infraestrutura como código
+Linux Bash	Scripts automatizados
+Git / GitHub	Versionamento e documentação
+Markdown	Documentação técnica
+jq	Manipulação de JSON nos scripts
+
+
+
+---
+
+ **Como Executar o Projeto**
+
+
+---
+
+1️⃣ **Clone o repositório**
+
+git clone https://github.com/Santosdevbjj/gerenciaInstanciaEC2.git
+cd gerenciaInstanciaEC2
+
+
+---
+
+2️⃣ **Configure suas credenciais AWS**
+
+aws configure
+
+Informe:
+
+Access Key
+
+Secret Key
+
+Região (ex: us-east-1)
+
+Formato JSON
+
+
+
+---
+
+3️⃣ **Execute os scripts Bash**
+
+🔹 **Criar AMI**
+
+./scripts/create_ami.sh i-0123456789abcdef MeuBackupAMI
+
+
+---
+
+🔹 **Criar Snapshot**
+
+./scripts/create_snapshot.sh vol-0abc123def456 "Snapshot de teste"
+
+
+---
+
+🔹 **Restaurar volume**
+
+./scripts/restore_volume_from_snapshot.sh snap-0123abc us-east-1a
+
+
+---
+
+🔹 **Lançar instância EC2**
+
+./scripts/launch_instance_from_ami.sh ami-01234567 t3.micro MinhaKey sg-123abc subnet-456def
+
+
+---
+
+ 4️⃣ **Executar Infraestrutura via Terraform**
+
+Inicializar:
+
+cd terraform
+terraform init
+
+Validar:
+
+terraform validate
+
+Planejar:
+
+terraform plan
+
+Criar recursos:
+
+terraform apply -auto-approve
+
+Destruir recursos:
+
+terraform destroy -auto-approve
+
+
+---
+
+ **Conclusão**
+
+Este projeto consolida habilidades essenciais de gerenciamento EC2:
+
+Criação de AMIs
+
+Gestão de Snapshots EBS
+
+Automação com scripts
+
+IaC com Terraform
+
+Documentação profissional
+
+Uso avançado de GitHub
+
+
+
+
+
+l
 
 ---
 
