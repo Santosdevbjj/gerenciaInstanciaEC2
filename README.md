@@ -225,7 +225,50 @@ Terminar instâncias e deletar volumes não usados.
 
 
 
+**8. Segurança e boas práticas**
 
+Use Security Groups restritivos (abrir porta 22 apenas para seu IP).
+
+Nunca exponha chaves privadas em repositório.
+
+Use KMS para criptografar volumes/snapshots sensíveis.
+
+Evite --no-reboot em AMIs de produção a menos que entenda o risco.
+
+Automatize limpeza de recursos temporários (snapshots/volumes/amis).
+
+Controle custos com tags e alerta de orçamentos (AWS Budgets).
+
+
+**9. Recursos úteis**
+
+Documentação AWS EC2 / AMI / Snapshots (link oficial)
+
+Documentação GitHub / Markdown (links no repo)
+
+
+**10. Arquivos e caminhos**
+
+/README.md — este arquivo principal.
+
+/docs/EC2_AMI_Snapshot_Guide.md — guia estendido e screenshots (opcional).
+
+/scripts/*.sh — scripts de automação (create_ami, create_snapshot, restore_volume...).
+
+/terraform/main.tf — exemplo de infra como código.
+
+/images/ — captures de tela usadas no tutorial.
+
+
+---
+
+
+
+
+Autor:
+Sergio Santos 
+
+---
 
 
 
